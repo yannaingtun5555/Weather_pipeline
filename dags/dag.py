@@ -15,7 +15,7 @@ from pipeline.table_create import create_table
         'retry_delay': timedelta(minutes=5),
     },
     start_date=datetime(2024, 1, 1),
-    schedule_interval='0 2 * * *',
+    schedule_interval='* * * * *',
     catchup=False,
     tags=['etl'],
 )

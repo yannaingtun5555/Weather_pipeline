@@ -1,0 +1,58 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: postgres_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: weather
+      
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  airflow-init:
+    image: apache/airflow:2.8.1
+    depends_on:
+      - postgres
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://postgres:postgres@postgres_db/weather
+      AIRFLOW__WEBSERVER__SECRET_KEY: "6b828ded2baab884feadfa1fcb3527b9a584c3ee74f3896fa6ab9f4a847020a5"  
+    entrypoint: >
+      bash -c "
+      airflow db migrate &&
+      airflow users create --username admin --password admin --firstname admin --lastname admin --role Admin --email admin@test.com || true
+      "
+
+  airflow-webserver:
+    image: apache/airflow:2.8.1
+    container_name: airflow_webserver
+    depends_on:
+      - postgres
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://postgres:postgres@postgres_db/weather
+      AIRFLOW__WEBSERVER__SECRET_KEY: "6b828ded2baab884feadfa1fcb3527b9a584c3ee74f3896fa6ab9f4a847020a5"  
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./:/opt/airflow/dags
+    command: airflow webserver
+
+  airflow-scheduler:
+    image: apache/airflow:2.8.1
+    container_name: airflow_scheduler
+    depends_on:
+      - postgres
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://postgres:postgres@postgres_db/weather
+      AIRFLOW__WEBSERVER__SECRET_KEY: "6b828ded2baab884feadfa1fcb3527b9a584c3ee74f3896fa6ab9f4a847020a5"  
+    volumes:
+      - ./:/opt/airflow/dags
+    command: airflow scheduler
+
+volumes:
+  postgres_data:

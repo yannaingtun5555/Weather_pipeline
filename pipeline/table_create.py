@@ -4,9 +4,9 @@ from psycopg2 import sql
 # Database connection settings
 DB_CONFIG = {
     "dbname": "weather",
-    "user": "ynt",
-    "password": "ynt",   
-    "host": "localhost",
+    "user": "postgres",
+    "password": "postgres",   
+    "host": "postgres", 
     "port": 5432
 }
 
