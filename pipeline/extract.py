@@ -1,10 +1,19 @@
 import requests
 from pipeline.config import  location
 from airflow.models import Variable
-
-cities = location()
+from kafka import KafkaProducer
+import json
 
 def extract():
+    topic = 'raw_topic'
+    producer = KafkaProducer(
+        bootstrap_servers=['kafka1:9092','kafka2:9092'],
+        value_serializer=lambda x: json.dumps(x).encode('utf-8'),
+        request_timeout_ms=30000,
+        metadata_max_age_ms=10000,
+        retries=10,
+        max_block_ms=30000
+    )
     OPENWEATHER_API_KEY =  Variable.get("openweather_api_key")
     if not OPENWEATHER_API_KEY:
         raise ValueError("Missing OPENWEATHER_API_KEY")
@@ -29,17 +38,18 @@ def extract():
                 failed += 1
                 continue
 
-            results.append(response.json())
+            weather_data = response.json()
             print(f"✅ Success: {city}")
-
+                       
+            producer.send(topic, value=weather_data)
+            producer.flush()   
         except requests.exceptions.RequestException as e:
             print(f"⚠️ Request error for {city}: {e}")
             failed += 1
 
-    # 🔥 IMPORTANT: prevent silent broken pipeline
-    if len(results) == 0:
+    producer.close()
+
+    if failed == len(cities):
         raise Exception("All API requests failed")
-
-    print(f"Finished: {len(results)} success, {failed} failed")
-
-    return results
+    
+    print(f"Finished: {len(cities) - failed} success, {failed} failed")

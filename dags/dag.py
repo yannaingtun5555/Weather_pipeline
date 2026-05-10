@@ -1,49 +1,36 @@
-from datetime import datetime, timedelta
 from airflow.decorators import dag, task
-from airflow.exceptions import AirflowFailException
-
-from pipeline.extract import extract
-from pipeline.transform import transform_data
-from pipeline.load import load_data
-from pipeline.table_create import create_table
+from datetime import datetime
+from utilis.broker_check import check_kafka_health
+from pipeline.extract import extract as extract_func
+from pipeline.transform import transform_and_stream
 
 @dag(
-    dag_id='etl_pipeline_taskflow',
-    default_args={
-        'owner': 'data_team',
-        'retries': 1,
-        'retry_delay': timedelta(minutes=5),
-    },
+    dag_id="kafka_health",
     start_date=datetime(2024, 1, 1),
-    schedule_interval='* * * * *',
-    catchup=False,
-    tags=['etl'],
+    schedule=None,
+    catchup=False
 )
-def etl_pipeline():
+def weather_pipeline():
 
     @task
-    def create_table_task():
-        if not create_table():
-            raise AirflowFailException("Table creation failed")
-        return "Table ready"
+    def run_kafka_check():
+        return check_kafka_health(
+            bootstrap_servers="kafka1:9092,kafka2:9092"
+        )
 
     @task
     def extract_task():
-        data = extract()
-        if not data:
-            raise ValueError("No data extracted")
-        return data
+        return extract_func()   # ✔ correct
 
     @task
-    def transform_task(data):
-        return transform_data(data)
+    def transform_task():
+        return transform_and_stream()
 
-    @task
-    def load_task(transformed_data):
-        load_data(transformed_data)
-        return "Load finished"
+    check = run_kafka_check()
+    extract_t = extract_task()
+    transform_t = transform_task()
 
-    # Workflow definition
-    create_table_task() >> load_task(transform_task(extract_task()))
+    check >> extract_t >> transform_t
 
-etl_pipeline_dag = etl_pipeline()
+
+dag = weather_pipeline()

@@ -1,5 +1,4 @@
 #!/bin/bash
-
 echo "Waiting for Kafka..."
 
 BOOTSTRAP_SERVER="kafka1:9092"
