@@ -8,9 +8,9 @@ def transform_and_stream():
         'raw_topic',
         bootstrap_servers=['kafka1:9092','kafka2:9092'],
         value_deserializer=lambda x: json.loads(x.decode('utf-8')),
-        auto_offset_reset='latest',
+        auto_offset_reset='earliest',
         group_id='weather_transform',
-        consumer_timeout_ms= 10 * 1000
+        consumer_timeout_ms= 15 * 1000
     )
 
     # Producer to weather2
